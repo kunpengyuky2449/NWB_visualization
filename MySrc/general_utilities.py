@@ -1,4 +1,7 @@
 from pynwb import NWBHDF5IO
+import numpy as np
+from scipy.ndimage import gaussian_filter1d
+
 
 # Prototype function
 def load_nwb(file_path):
@@ -71,3 +74,56 @@ def get_trial_timing(nwbfile):
 
 
     return {'start_times':start_times,'stop_times':stop_times}
+
+def compute_average_firing_rate(unit_spike_times, align_times, window, bin_size = 0.05, smooth = True, smooth_sigma  = 2):
+    time_bins = np.arange(window[0], window[1], bin_size)
+    trial_spike_counts = np.zeros((len(align_times), len(time_bins) - 1))
+    
+    for trial_idx, align_time in enumerate(align_times):
+        aligned_spikes = unit_spike_times - align_time  # Align spikes to event
+        filtered_spikes = aligned_spikes[(aligned_spikes >= window[0]) & (aligned_spikes <= window[1])]
+        hist, _ = np.histogram(filtered_spikes, bins=time_bins)  # Bin spike counts
+        trial_spike_counts[trial_idx, :] = hist / bin_size  # Convert to rate (Hz)
+    
+    mean_firing_rate = np.mean(trial_spike_counts, axis=0)  # Average across trials
+    if smooth:
+        smoothed_firing_rate = gaussian_filter1d(mean_firing_rate, sigma=smooth_sigma)  # Apply Gaussian smoothing
+    else:
+        smoothed_firing_rate = mean_firing_rate
+    return smoothed_firing_rate, time_bins
+
+def check_quality(metric_name, metric_value, quality_thresholds = None):
+    """
+    Check if a given metric value falls within the acceptable threshold range.
+    
+    Args:
+        metric_name (str): Name of the metric.
+        metric_value (float): The value of the metric to check.
+    
+    Returns:
+        bool: True if the value is within the good range or if the metric has no predefined threshold. 
+              False if the value is outside the defined threshold range.
+    """
+    if quality_thresholds == None:
+        quality_thresholds = {
+            "presence_ratio": (0.9, 1.0),
+            "snr": (3.5, float('inf')),  # SNR should be above 3.5
+            "isi_violations_ratio": (0, 0.05),  # Low ISI violations indicate better quality
+            "l_ratio": (0, 0.2),  # L-ratio should be small for good quality
+            "nn_hit_rate": (0.8, 1.0),  # Example: Assume a good hit rate should be high
+            "sd_ratio": (0.66, 1.5)  # Example: Within a reasonable range
+        }
+    if metric_name in quality_thresholds:
+        min_val, max_val = quality_thresholds[metric_name]
+        return min_val <= metric_value <= max_val
+    return True  # If no threshold is defined, return True by default
+
+def fetch_key_metrices(units_tables, table_names,electrode_id, unit_index, metrices_names = None):
+    if metrices_names == None:
+        metrices_names = ["quality","presence_ratio","snr","isi_violations_ratio","l_ratio","nn_hit_rate","sd_ratio"]
+    fetched_metrices = dict()
+    for met in metrices_names:
+        fetched_metrices[met] = units_tables[table_names[electrode_id]][met][unit_index]
+    
+    return fetched_metrices, metrices_names
+    
