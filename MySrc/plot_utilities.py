@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from MySrc.general_utilities import compute_average_firing_rate, fetch_key_metrices, check_quality # Import the function
 
 def plot_neuron_general_metrices(
-    units_tables, table_names, electrode_id, unit_id, trials_timings, 
+    units_tables, table_names, electrode_id, unit_id, trials_timings, trial_centers = ["",""],
     start_window=(-1, 6), stop_window=(-6, 1), smooth=True, resize = 1
 ):
     """
@@ -16,12 +16,10 @@ def plot_neuron_general_metrices(
         electrode_id (int): ID of the electrode.
         unit_id (int): ID of the neuron/unit.
         trials_timings (dict): Dictionary with 'start_times' and 'stop_times' arrays.
-        compute_average_firing_rate (function): Function to compute firing rates.
-        fetch_key_metrices (function): Function to fetch neuron quality metrics.
-        check_quality (function): Function to validate neuron quality.
         start_window (tuple): Time window around trial start (default: (-1,6)).
         stop_window (tuple): Time window around trial stop (default: (-6,1)).
         smooth (bool): Whether to apply smoothing when computing firing rates (default: True).
+        resize (float): resize the figure proportionally
     """
     
     # Fetch unit data from tables
@@ -32,6 +30,8 @@ def plot_neuron_general_metrices(
     # Fetch trial start/stop times
     start_times = trials_timings['start_times']
     stop_times = trials_timings['stop_times']
+    raster_center1 = trials_timings
+    raster_center2 = trials_timings
 
     # Compute trial-averaged firing rates
     smoothed_firing_rate_start, time_bins_start = compute_average_firing_rate(unit_spike_times, start_times, window=start_window, smooth=smooth, bin_size=0.02)

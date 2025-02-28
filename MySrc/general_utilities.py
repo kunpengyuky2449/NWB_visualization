@@ -1,7 +1,8 @@
 from pynwb import NWBHDF5IO
 import numpy as np
 from scipy.ndimage import gaussian_filter1d
-
+import os
+import datetime
 
 # Prototype function
 def load_nwb(file_path):
@@ -60,6 +61,8 @@ def get_trial_timing(nwbfile):
     # Extract 'start_time' and 'stop_time' columns
     start_times = nwbfile.trials['start_time'].data[:]
     stop_times = nwbfile.trials['stop_time'].data[:]
+    stim1_ON_time = nwbfile.trials['stim1_ON_time'].data[:]
+    stim2_ON_time = nwbfile.trials['stim2_ON_time'].data[:]
 
     if len(start_times) != len(stop_times):
         raise ValueError(f"❌ Mismatch in count: {len(start_times)} start_times vs {len(stop_times)} stop_times.")
@@ -72,8 +75,7 @@ def get_trial_timing(nwbfile):
         if i > 0 and start_times[i] <= stop_times[i - 1]:  # Ensure start → stop → start → stop sequence
             raise ValueError(f"❌ Overlapping trials at index {i}: start_time ({start_times[i]}) is before previous stop_time ({stop_times[i-1]}).")
 
-
-    return {'start_times':start_times,'stop_times':stop_times}
+    return {'start_times':start_times,'stop_times':stop_times,'stim1_ON_time':stim1_ON_time,'stim2_ON_time':stim2_ON_time}
 
 def compute_average_firing_rate(unit_spike_times, align_times, window, bin_size = 0.05, smooth = True, smooth_sigma  = 2):
     time_bins = np.arange(window[0], window[1], bin_size)
@@ -127,3 +129,45 @@ def fetch_key_metrices(units_tables, table_names,electrode_id, unit_index, metri
     
     return fetched_metrices, metrices_names
     
+
+    import os
+import datetime
+
+def save_figure(fig, handle=".jpg", name=None, output_folder=None):
+    """
+    Saves the given matplotlib figure with a timestamped filename.
+
+    Parameters:
+        fig (matplotlib.figure.Figure): The figure object to save.
+        handle (str): The file extension (e.g., ".jpg", ".png", ".pdf", ".svg"). Default is ".jpg".
+        name (str or None): The base name for the file. If None, uses only the timestamp.
+        output_folder (str or None): The directory to save the figure. 
+                                     If None, saves in `example_plots/` in the current script's location.
+    """
+    # Ensure the handle is a valid extension
+    valid_extensions = (".jpg", ".jpeg", ".png", ".pdf", ".svg",".eps")
+    if not handle.lower().startswith(valid_extensions):
+        raise ValueError(f"Invalid file extension '{handle}'. Use one of {valid_extensions}")
+
+    # Generate a timestamp for uniqueness
+    timestamp = datetime.datetime.now().strftime("%y%m%d%H%M%S")
+
+    # Construct filename: [name]_YYYYMMDDHHMMSS.[extension] or just timestamp if no name given
+    filename = f"{name}_{timestamp}{handle}" if name else f"{timestamp}{handle}"
+
+    # Determine output directory
+    if output_folder is None:
+        # Get the current working directory (where the script/notebook is running)
+        script_dir = os.getcwd()
+        output_folder = os.path.join(script_dir, "example_plots")
+
+        # Create `example_plots/` if it doesn't exist
+        os.makedirs(output_folder, exist_ok=True)
+
+    # Determine full file path
+    file_path = os.path.join(output_folder, filename)
+
+    # Save the figure
+    fig.savefig(file_path, dpi=300, bbox_inches="tight")
+    
+    print(f"✅ Figure saved at: {file_path}")
