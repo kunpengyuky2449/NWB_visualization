@@ -7,9 +7,9 @@ import datetime
 # Prototype function
 def load_nwb(file_path):
     """Load an NWB file and return the NWBFile object."""
-    io = NWBHDF5IO(file_path, mode="r")
+    io = NWBHDF5IO(file_path, mode='r')
     nwbfile = io.read()
-    return nwbfile
+    return nwbfile, io
 
 def get_units_tables(nwbfile):
     """
@@ -48,7 +48,18 @@ def get_trial_timing(nwbfile):
     - nwbfile: NWBFile object (loaded from NWBHDF5IO)
 
     Returns:
-    - trials_timing_df (pd.DataFrame): A DataFrame with 'start_time' and 'stop_time' columns.
+    - dict: A dictionary containing trial event timings with keys:
+      - 'start_time': Trial start time.
+      - 'stim1_ON_time': First stimulus onset time.
+      - 'stim2_ON_time': Second stimulus onset time.
+      - 'choiceTarget_ON_time': Time when choice target appears.
+      - 'fixTarget_OFF_time': Time when fixation target disappears.
+      - 'responseStart_time': Time when the subject initiates a response and gaze go out of fixation point.
+      - 'fix_ChoiceTarget_time': Time when gaze fixes at Choice target.
+      - 'rewardStart_time': Time when the subject receives a reward.
+      - 'choiceTarget_OFF_time': Time when the choice target disappears.
+      - 'trialEnd_time': Trial enter ending phase.
+      - 'stop_time': Trial stop the trial ending time.
     """
     # Ensure the NWB file contains trial data
     if not hasattr(nwbfile, 'trials') or nwbfile.trials is None:
@@ -57,25 +68,40 @@ def get_trial_timing(nwbfile):
 
     # Convert NWB trials table to a Pandas DataFrame
     trials_df = nwbfile.trials.to_dataframe()
-    trials_df = nwbfile.trials.to_dataframe()
     # Extract 'start_time' and 'stop_time' columns
-    start_times = nwbfile.trials['start_time'].data[:]
-    stop_times = nwbfile.trials['stop_time'].data[:]
+    start_time = nwbfile.trials['start_time'].data[:]
+    
     stim1_ON_time = nwbfile.trials['stim1_ON_time'].data[:]
+    stim1_OFF_time = nwbfile.trials['stim1_OFF_time'].data[:]
     stim2_ON_time = nwbfile.trials['stim2_ON_time'].data[:]
+    stim2_OFF_time = nwbfile.trials['stim2_OFF_time'].data[:]
 
-    if len(start_times) != len(stop_times):
-        raise ValueError(f"❌ Mismatch in count: {len(start_times)} start_times vs {len(stop_times)} stop_times.")
+    choiceTarget_ON_time = nwbfile.trials['choiceTarget_ON_time'].data[:]
+    fixTarget_OFF_time = nwbfile.trials['fixTarget_OFF_time'].data[:]
+    responseStart_time = nwbfile.trials['responseStart_time'].data[:]
+    fix_ChoiceTarget_time = nwbfile.trials['fix_ChoiceTarget_time'].data[:]
+    rewardStart_time = nwbfile.trials['rewardStart_time'].data[:]
+    choiceTarget_OFF_time = nwbfile.trials['choiceTarget_OFF_time'].data[:]
+    trialEnd_time = nwbfile.trials['trialEnd_time'].data[:]
+    
+    stop_time = nwbfile.trials['stop_time'].data[:]
+
+    if len(start_time) != len(stop_time):
+        raise ValueError(f"❌ Mismatch in count: {len(start_time)} start_times vs {len(stop_time)} stop_times.")
 
     # **Sanity Check 2 & 3: Ensure each start time comes before its corresponding stop time and trials are sequential**
-    for i in range(len(start_times)):
-        if start_times[i] >= stop_times[i]:  # Start should be strictly before stop
-            raise ValueError(f"❌ Timing issue at index {i}: start_time ({start_times[i]}) >= stop_time ({stop_times[i]}).")
+    for i in range(len(start_time)):
+        if start_time[i] >= stop_time[i]:  # Start should be strictly before stop
+            raise ValueError(f"❌ Timing issue at index {i}: start_time ({start_time[i]}) >= stop_time ({stop_time[i]}).")
 
-        if i > 0 and start_times[i] <= stop_times[i - 1]:  # Ensure start → stop → start → stop sequence
-            raise ValueError(f"❌ Overlapping trials at index {i}: start_time ({start_times[i]}) is before previous stop_time ({stop_times[i-1]}).")
+        if i > 0 and start_time[i] <= stop_time[i - 1]:  # Ensure start → stop → start → stop sequence
+            raise ValueError(f"❌ Overlapping trials at index {i}: start_time ({start_time[i]}) is before previous stop_time ({stop_time[i-1]}).")
 
-    return {'start_times':start_times,'stop_times':stop_times,'stim1_ON_time':stim1_ON_time,'stim2_ON_time':stim2_ON_time}
+    return {'start_time':start_time,'stim1_ON_time':stim1_ON_time, 'stim1_OFF_time':stim1_OFF_time,
+            'stim2_ON_time':stim2_ON_time, 'stim2_OFF_time':stim2_OFF_time,
+            'choiceTarget_ON_time':choiceTarget_ON_time,'fixTarget_OFF_time':fixTarget_OFF_time,'responseStart_time':responseStart_time,
+            'fix_ChoiceTarget_time':fix_ChoiceTarget_time,'rewardStart_time':rewardStart_time,'choiceTarget_OFF_time':choiceTarget_OFF_time,
+            'trialEnd_time':trialEnd_time,'stop_time':stop_time}
 
 def compute_average_firing_rate(unit_spike_times, align_times, window, bin_size = 0.05, smooth = True, smooth_sigma  = 2):
     time_bins = np.arange(window[0], window[1], bin_size)
@@ -118,6 +144,8 @@ def check_quality(metric_name, metric_value, quality_thresholds = None):
     if metric_name in quality_thresholds:
         min_val, max_val = quality_thresholds[metric_name]
         return min_val <= metric_value <= max_val
+    elif metric_name == "quality":
+        return metric_value == "good"
     return True  # If no threshold is defined, return True by default
 
 def fetch_key_metrices(units_tables, table_names,electrode_id, unit_index, metrices_names = None):
@@ -161,8 +189,8 @@ def save_figure(fig, handle=".jpg", name=None, output_folder=None):
         script_dir = os.getcwd()
         output_folder = os.path.join(script_dir, "example_plots")
 
-        # Create `example_plots/` if it doesn't exist
-        os.makedirs(output_folder, exist_ok=True)
+    # Create `example_plots/` or target folder if it doesn't exist
+    os.makedirs(output_folder, exist_ok=True)
 
     # Determine full file path
     file_path = os.path.join(output_folder, filename)
