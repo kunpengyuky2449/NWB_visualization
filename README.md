@@ -9,11 +9,12 @@ This repository contains tools and tutorials for **neural data analysis**, inclu
 ### 1️⃣ **Tutorials**
 - **`NWB_tutorial.ipynb`**  
   - A Jupyter Notebook tutorial on loading and processing **neural data in NWB format**.
-  - Covers extracting spike times, trial events, and basic analysis workflows.
+  - Covers extracting spike times, trial events, unit metrices and basic analysis/visualization workflows.
+  - Provide several utilities for visualzing unit quaities .
 
 - **`dPCA_tutorial_playground.ipynb`**  
-  - A hands-on notebook for performing **demixed Principal Component Analysis (dPCA)**.
-  - Shows how to extract and visualize task-related neural population activity.
+  - A simple starting hands-on notebook for performing **demixed Principal Component Analysis (dPCA)** on NWB file processed in previous pipeline.
+  - Provide several utilities to construct input multidimensional tensor for dPCA from NWB file.
 
 ### 2️⃣ **Neuron Inspection UI**
 - **`Neuron_inspection_UI.py`**  
