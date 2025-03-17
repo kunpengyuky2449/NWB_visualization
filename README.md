@@ -29,3 +29,5 @@ This repository contains tools and tutorials for **neural data analysis**, inclu
    ```bash
    git clone <repository_url>
    cd <repository_folder>
+   pip install -r requirements.txt
+
