@@ -14,18 +14,25 @@ def plot_neuron_general_metrices(
     waveform plots, and quality metrics.
 
     Parameters:
-        units_tables (dict): Dictionary containing spike sorting results.
-        table_names (dict): Mapping of electrode IDs to table names.
-        electrode_id (int): ID of the electrode.
+        filepath (str): Path to the NWB file containing electrophysiology data.
+        electrode_id (int): ID of the electrode from which the unit was recorded.
         unit_id (int): ID of the neuron/unit.
-        trials_timings (dict): Dictionary with 'start_time' and 'stop_time' arrays.
-        start_window (tuple): Time window around trial start (default: (-1,6)).
-        stop_window (tuple): Time window around trial stop (default: (-6,1)).
-        smooth (bool): Whether to apply smoothing when computing firing rates (default: True).
-        resize (float): resize the figure proportionally
+        trial_window_marks (list of str, optional): List of event timestamps that define 
+            trial windows (default: ["stim1_ON_time", "stim2_ON_time", "stim2_OFF_time", 
+            "choiceTarget_ON_time", "responseStart_time"]).
+        trial_window_expanding (list of int, optional): Time expansion (in seconds) 
+            around the trial window for analysis (default: [-1, +2]).
+        smooth (bool, optional): Whether to apply smoothing when computing trials-averaging firing rates (default: False).
+        resize (float, optional): Factor to proportionally resize the figure (default: 1).
+        silent_plot (bool, optional): If True, suppresses plot display but allows figure saving (default: False).
+    Returns:
+        fig: the figure object
+        fig_filename: figure fileme suggested by the function containing mostly all inportant information about the unit
+
     """
     
     # Fetch unit data from tables
+    # nwbfile, io = load_nwb(filepath)
     nwbfile, io = load_nwb(filepath)
     units_tables, table_names = get_units_tables(nwbfile)
     #print(table_names)
@@ -233,7 +240,7 @@ def plot_general_metrices_all_units(filepath, output_folder=None, resize=0.9, sm
     """
 
     # Load NWB file
-    nwbfile, _ = load_nwb(filepath)
+    nwbfile,_ = load_nwb(filepath)
 
     # Get unit tables and electrode names
     units_tables, table_names = get_units_tables(nwbfile)

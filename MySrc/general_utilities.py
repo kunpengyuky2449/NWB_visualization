@@ -3,6 +3,7 @@ import numpy as np
 from scipy.ndimage import gaussian_filter1d
 import os
 import datetime
+import json
 
 # Prototype function
 def load_nwb(file_path):
@@ -10,6 +11,11 @@ def load_nwb(file_path):
     io = NWBHDF5IO(file_path, mode='r')
     nwbfile = io.read()
     return nwbfile, io
+# def load_nwb(file_path):
+#     """Load an NWB file and return the NWBFile object."""
+#     with NWBHDF5IO(file_path, mode='r') as io:
+#         nwbfile = io.read()
+#     return nwbfile
 
 def get_units_tables(nwbfile):
     """
@@ -67,7 +73,7 @@ def get_trial_timing(nwbfile):
         return None  # Return None if no trial data is available
 
     # Convert NWB trials table to a Pandas DataFrame
-    trials_df = nwbfile.trials.to_dataframe()
+    # trials_df = nwbfile.trials.to_dataframe()
     # Extract 'start_time' and 'stop_time' columns
     start_time = nwbfile.trials['start_time'].data[:]
     
@@ -199,3 +205,37 @@ def save_figure(fig, handle=".jpg", name=None, output_folder=None):
     fig.savefig(file_path, dpi=300, bbox_inches="tight")
     
     print(f"✅ Figure saved at: {file_path}")
+
+
+def load_selected_neurons(file_path):
+    """
+    Loads a saved JSON file containing session name and selected neurons.
+
+    Parameters:
+        file_path (str): The path to the saved JSON file.
+
+    Returns:
+        session_name (str): The session identifier.
+        selected_neurons (list): List of selected neurons [(electrode, unit), ...].
+    """
+    if not file_path or not file_path.endswith(".json"):
+        print("❌ Invalid file path or file is not a JSON.")
+        return None, None  # Return None if the file path is invalid
+
+    try:
+        # Load JSON file
+        with open(file_path, "r") as f:
+            data = json.load(f)
+
+        # Extract session name and selected neurons
+        session_name = data.get("session_name", "Unknown Session")
+        selected_neurons = data.get("selected_neurons", [])
+
+        print(f"📂 Session Name: {session_name}")
+        print(f"✅ Number of Selected Neurons: {len(selected_neurons)}")
+
+        return session_name, selected_neurons  # ✅ Return values
+
+    except Exception as e:
+        print(f"❌ Error loading file: {e}")
+        return None, None  # Return None in case of an error
